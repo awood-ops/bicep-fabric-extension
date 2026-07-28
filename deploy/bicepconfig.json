@@ -1,0 +1,9 @@
+{
+  "experimentalFeaturesEnabled": {
+    "localDeploy": true
+  },
+  "extensions": {
+    "fabric": "../extension/bin/bicep-ext-fabric"
+  },
+  "implicitExtensions": []
+}
