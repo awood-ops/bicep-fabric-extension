@@ -14,5 +14,6 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.Bicep.Local.Extension" Version="0.44.1" />
+    <PackageReference Include="Azure.Identity" Version="1.13.1" />
   </ItemGroup>
 </Project>
