@@ -11,6 +11,46 @@ Written up in full on the blog: [awood.tech](https://awood.tech).
 - `extension/` - the local extension itself (.NET, `Azure.Bicep.Local.Extension`), with `Workspace`, `Domain`, and `TenantSetting` resource handlers
 - `deploy/` - the `.bicep`/`.bicepparam` that declares domains, nested domains, workspaces (assigned to domains), and a tenant setting, all via the extension
 
+## Architecture
+
+Three deployment surfaces (ARM, Entra, the local extension process) feeding into one Fabric tenant, plus the one workaround (Entra ID) that doesn't go through Bicep at all:
+
+```mermaid
+flowchart TD
+    subgraph arm["Azure Resource Manager"]
+        cap["capacity/main.bicep"] --> rg["Resource Group +<br/>Fabric F2 Capacity"]
+    end
+
+    subgraph entra["Entra ID"]
+        cli["az ad app create<br/>az ad sp create<br/>(workaround, not Bicep)"] --> sp["App registration +<br/>Service Principal"]
+        sp --> id["identity/main.bicep"]
+        id --> groups["4 RBAC groups +<br/>Key Vault"]
+    end
+
+    subgraph ext["Local extension"]
+        build["dotnet publish +<br/>bicep publish-extension"] --> bin["bicep-ext-fabric<br/>(spawned by the CLI)"]
+    end
+
+    subgraph local["deploy/main.bicep (targetScope = 'local')"]
+        dom["Domain"]
+        ws["Workspace"]
+        ts["TenantSetting"]
+    end
+
+    rg -. assigned to .-> ws
+    groups -. role assignments .-> dom
+    groups -. group scope .-> ts
+    bin ==>|Bicep Extensibility Protocol| dom
+    bin ==>|Bicep Extensibility Protocol| ws
+    bin ==>|Bicep Extensibility Protocol| ts
+
+    dom -->|REST| fabric[("api.fabric.microsoft.com")]
+    ws -->|REST| fabric
+    ts -->|REST| fabric
+```
+
+The double arrows are the whole point of this repo: `bicep local-deploy` doesn't hand `Domain`/`Workspace`/`TenantSetting` to Azure Resource Manager at all. It spawns `bicep-ext-fabric` as a real process on whatever machine ran the command, talks to it over the Bicep Extensibility Protocol, and that process makes the actual HTTPS calls to `api.fabric.microsoft.com` itself. Every other box in this diagram is a normal ARM or Graph resource; these three aren't, which is the gap this whole lab exists to close.
+
 ## A known Graph extension limitation
 
 The Microsoft Graph Bicep extension's ARM-side handler for `Microsoft.Graph/applications` currently doesn't expose `appId` or `id` back out at all, not as a cross-resource reference, not even as a plain output on the same resource:
