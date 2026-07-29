@@ -63,12 +63,13 @@ resource childDomain 'Domain' = [for cd in childDomains: {
   contributorGroupIds: cd.?contributorGroupIds ?? []
 }]
 
-// ARM's if() is not short-circuiting - both branches of a Bicep ternary are evaluated
-// regardless of the condition, so an out-of-range index in the *unchosen* branch (indexOf
-// returning -1 when a name isn't in that array) still fails template validation as
-// "domain[-1] is not valid", even though that branch's value is never actually used. Clamping
-// both indices to a valid (if wrong) value with max(idx, 0) keeps both branches structurally
-// valid; only the chosen branch's value is ever read.
+// A ternary here fails at deploy time with "domain[-1] is not valid" for a workspace whose
+// domain is nested, even though ARM's docs say if() only evaluates the selected branch when
+// the condition is decidable at deployment start (which this one is). Unconfirmed why; most
+// likely something about how ARM validates resource-array-index references inside a copy loop
+// happens structurally, separately from the short-circuited value evaluation the docs describe.
+// Clamping both indices to a valid (if wrong) value with max(idx, 0) keeps both branches
+// structurally in-bounds regardless; only the chosen branch's value is ever read.
 resource ws 'Workspace' = [for w in workspaces: {
   displayName: w.name
   description: 'Created by the bicep-ext-fabric local extension lab.'
