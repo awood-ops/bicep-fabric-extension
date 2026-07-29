@@ -3,6 +3,15 @@ extension microsoftGraphV1
 @description('Object ID of the human admin to add to the workspace admin group (so the workspace is visible in the portal during the lab).')
 param labAdminObjectId string
 
+@description('''
+Object ID of the extension's service principal. Created outside this template (az ad app create
++ az ad sp create), not via the Microsoft.Graph/applications and servicePrincipals resources -
+the Graph extension's ARM-side handler currently can't expose appId/id back out at all, even as
+a same-resource output ("The language expression property 'appId' doesn't exist"), which rules out
+both creating the SP inline and reading its id back out of this template.
+''')
+param spObjectId string
+
 @description('Location for the Key Vault.')
 param location string = resourceGroup().location
 
@@ -55,18 +64,9 @@ resource sgSpWorkspaceCreators 'Microsoft.Graph/groups@v1.0' = {
   securityEnabled: true
   members: {
     relationships: [
-      fabricExtSp.id
+      spObjectId
     ]
   }
-}
-
-resource fabricExtApp 'Microsoft.Graph/applications@v1.0' = {
-  uniqueName: 'bicep-fabric-local-ext-lab'
-  displayName: 'bicep-fabric-local-ext-lab'
-}
-
-resource fabricExtSp 'Microsoft.Graph/servicePrincipals@v1.0' = {
-  appId: fabricExtApp.appId
 }
 
 // The workspace's own service principal is the officially-supported identity for Key Vault
@@ -74,7 +74,7 @@ resource fabricExtSp 'Microsoft.Graph/servicePrincipals@v1.0' = {
 // connection target (ADLS Gen2, SQL Server, Blobs and Azure Analysis Services only), so
 // Key Vault access is wired to this SP rather than to the workspace identity.
 resource keyVault 'Microsoft.KeyVault/vaults@2024-11-01' = {
-  name: 'kv-bicepfablab-uks-01'
+  name: 'kv-bicepfablab-uks-02'
   location: location
   properties: {
     sku: {
@@ -92,13 +92,11 @@ resource kvSecretsUserRole 'Microsoft.Authorization/roleAssignments@2022-04-01' 
   scope: keyVault
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
-    principalId: fabricExtSp.id
+    principalId: spObjectId
     principalType: 'ServicePrincipal'
   }
 }
 
-output appId string = fabricExtApp.appId
-output spObjectId string = fabricExtSp.id
 output adminGroupId string = sgAdmin.id
 output memberGroupId string = sgMember.id
 output contributorGroupId string = sgContributor.id

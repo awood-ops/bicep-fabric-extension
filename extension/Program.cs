@@ -12,7 +12,9 @@ builder.Services
         version: "0.1.0",
         isSingleton: true,
         typeAssembly: typeof(Program).Assembly)
-    .WithResourceHandler<WorkspaceHandler>();
+    .WithResourceHandler<WorkspaceHandler>()
+    .WithResourceHandler<DomainHandler>()
+    .WithResourceHandler<TenantSettingHandler>();
 
 var app = builder.Build();
 

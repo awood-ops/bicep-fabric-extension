@@ -45,6 +45,14 @@ public class WorkspaceHandler(IHttpClientFactory httpClientFactory) : TypedResou
         using var roleResponse = await http.PostAsJsonAsync($"{BaseUrl}/workspaces/{created.Id}/roleAssignments", roleAssignmentBody, cancellationToken);
         roleResponse.EnsureSuccessStatusCode();
 
+        if (!string.IsNullOrEmpty(request.Properties.DomainId))
+        {
+            var assignBody = new { workspacesIds = new[] { created.Id } };
+            using var assignResponse = await http.PostAsJsonAsync(
+                $"{BaseUrl}/admin/domains/{request.Properties.DomainId}/assignWorkspaces", assignBody, cancellationToken);
+            assignResponse.EnsureSuccessStatusCode();
+        }
+
         return GetResponse(request);
     }
 
