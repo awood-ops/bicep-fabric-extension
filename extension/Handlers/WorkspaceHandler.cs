@@ -33,9 +33,14 @@ public class WorkspaceHandler(IHttpClientFactory httpClientFactory) : TypedResou
 
         request.Properties.Id = created.Id;
 
-        // The SP is Admin on the workspace it just created, but nobody else is yet -
-        // grant the human admin the Admin role too so they can act on the workspace afterward
-        // (including the capacity assignment step above).
+        // Whoever calls this API is Admin on the workspace it just created, but nobody else is
+        // yet - grant AdminObjectId the Admin role too so they can act on the workspace afterward
+        // (including the capacity assignment step above). Normally that's a different principal
+        // (the calling SP creates it, a human gets granted access), but when running as yourself
+        // (AzureCliCredential, no SP) with AdminObjectId set to your own object ID, the caller and
+        // the grantee are the same principal, who's already Admin from creation - a second,
+        // redundant grant 409s. Since the actual desired end state (AdminObjectId holds Admin) is
+        // already true in that case, a 409 here is treated as success rather than a real failure.
         var roleAssignmentBody = new
         {
             principal = new { id = request.Properties.AdminObjectId, type = "User" },
@@ -43,7 +48,10 @@ public class WorkspaceHandler(IHttpClientFactory httpClientFactory) : TypedResou
         };
 
         using var roleResponse = await http.PostAsJsonAsync($"{BaseUrl}/workspaces/{created.Id}/roleAssignments", roleAssignmentBody, cancellationToken);
-        roleResponse.EnsureSuccessStatusCode();
+        if (roleResponse.StatusCode != System.Net.HttpStatusCode.Conflict)
+        {
+            roleResponse.EnsureSuccessStatusCode();
+        }
 
         if (!string.IsNullOrEmpty(request.Properties.DomainId))
         {
