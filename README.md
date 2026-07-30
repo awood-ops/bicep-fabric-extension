@@ -51,9 +51,11 @@ flowchart TD
 
 The double arrows are the whole point of this repo: `bicep local-deploy` doesn't hand `Domain`/`Workspace`/`TenantSetting` to Azure Resource Manager at all. It spawns `bicep-ext-fabric` as a real process on whatever machine ran the command, talks to it over the Bicep Extensibility Protocol, and that process makes the actual HTTPS calls to `api.fabric.microsoft.com` itself. Every other box in this diagram is a normal ARM or Graph resource; these three aren't, which is the gap this whole lab exists to close.
 
-## A known Graph extension limitation
+## A known Graph extension limitation (fixed upstream as of the last check)
 
-The Microsoft Graph Bicep extension's ARM-side handler for `Microsoft.Graph/applications` currently doesn't expose `appId` or `id` back out at all, not as a cross-resource reference, not even as a plain output on the same resource:
+**Update:** re-tested this immediately before publishing, against the same Bicep CLI and extension versions below, and it's fixed, `appId`/`id` are readable again, no workaround needed. Leaving this section as-is since the workaround is still what `identity/main.bicep` actually does today (re-plumbing it back to pure Bicep hasn't been done yet), but if you're starting fresh, try creating `fabricExtApp`/`fabricExtSp` directly in Bicep first, it might just work now.
+
+The Microsoft Graph Bicep extension's ARM-side handler for `Microsoft.Graph/applications` used to not expose `appId` or `id` back out at all, not as a cross-resource reference, not even as a plain output on the same resource:
 
 ```
 The language expression property 'appId' doesn't exist,
@@ -100,6 +102,8 @@ cd deploy
 bicep local-deploy main.bicepparam
 ```
 
-This runs as your own identity rather than the SP, so none of the tenant-setting allow-listing above is needed if you're already a Fabric Administrator, useful for quickly iterating on the extension itself. It's not a substitute for testing the actual least-privilege SP story this lab is about, just a faster inner loop.
+This runs as your own identity rather than the SP, so none of the tenant-setting allow-listing above is needed if you're already a Fabric Administrator, useful for quickly iterating on the extension itself. It's not a substitute for testing the actual least-privilege SP story this lab is about, just a faster inner loop. The fallback is silent by design: an unset or typo'd `FABRIC_CLIENT_ID`/`SECRET`/`TENANT_ID` doesn't error, it just authenticates as whatever's logged into `az cli` instead, which could be a surprise on a shared machine.
+
+If you run this way with `adminObjectId` set to your own object ID (the natural setup, granting yourself workspace admin), the workspace creates fine but the explicit admin-role grant used to 409 since you're already Admin from creating it, and that exception aborted before domain assignment ever ran. Fixed in `WorkspaceHandler.cs`: a 409 on that specific call is now treated as already-satisfied rather than a failure. Tested end to end via this exact path before this note was written.
 
 `bicep local-deploy` has no state file, so retrying a failed or partial deployment can create duplicate domains/workspaces rather than being idempotent. Fabric domains do reject a duplicate display name outright (`409 Conflict`); workspaces don't, so check what already exists before rerunning after a partial failure.
