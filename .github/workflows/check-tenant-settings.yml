@@ -1,0 +1,67 @@
+name: Check Fabric tenant settings
+
+on:
+  schedule:
+    - cron: '0 8 * * 1'   # Every Monday at 08:00 UTC
+  workflow_dispatch:        # Allow manual trigger
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write           # OIDC federation to Entra, so no client secret is stored
+
+jobs:
+  check-tenant-settings:
+    name: Check for new or changed tenant settings
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.FABRIC_READER_CLIENT_ID }}
+          tenant-id: ${{ vars.FABRIC_TENANT_ID }}
+          allow-no-subscriptions: true   # Fabric admin APIs are tenant-scoped, no subscription needed
+
+      - name: Check for tenant setting drift
+        id: check
+        shell: pwsh
+        run: |
+          ./scripts/check-tenant-settings-drift.ps1
+          "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Add job summary
+        if: always()
+        run: |
+          if [ -f drift-summary.md ]; then
+            cat drift-summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Drift check did not produce a summary. Check the step logs, most likely an auth failure." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # drift-summary.md is gitignored, so it can stay in place as the PR body without being
+      # committed alongside the regenerated baseline.
+      - name: Create pull request
+        if: steps.check.outputs.exit_code == '1'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: chore/tenant-settings-drift
+          delete-branch: true
+          title: 'chore: Fabric tenant settings drift'
+          body-path: drift-summary.md
+          commit-message: 'chore: regenerate tenant settings baseline'
+          labels: fabric,tenant-settings
+
+      # A non-zero exit that isn't the expected "drift found" signal means the check itself broke,
+      # most often an expired federated credential or an identity that lost admin API access. Fail
+      # loudly rather than reporting a clean week.
+      - name: Fail on unexpected error
+        if: steps.check.outputs.exit_code != '0' && steps.check.outputs.exit_code != '1'
+        run: |
+          echo "Drift check exited with ${{ steps.check.outputs.exit_code }}, which is neither clean (0) nor drift (1)."
+          exit 1

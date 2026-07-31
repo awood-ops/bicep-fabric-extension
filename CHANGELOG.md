@@ -18,9 +18,23 @@ and read back off the assembly at startup. Tags are `vMAJOR.MINOR.PATCH` and mat
   Microsoft cloud security benchmark baseline for Fabric.
 - `-Sanitise` switch on `scripts/get-tenant-settings.ps1`, replacing security group object IDs and
   names with placeholders for output destined somewhere public.
+- `scripts/baseline.json`, a posture per setting, and a `-Baseline` switch that applies it so the
+  generated param file asserts the recommended posture rather than capturing current state.
+- `scripts/regenerate-baseline.ps1`, making regeneration one command rather than a remembered set of
+  flags plus a hand-written header.
+- `scripts/check-tenant-settings-drift.ps1` and a weekly
+  `.github/workflows/check-tenant-settings.yml` that compares the live tenant against the posture map
+  and opens a PR when settings appear or disappear. New settings are never assigned a posture
+  automatically; they surface as commented-out `DECIDE` entries for a human to classify. Auth is OIDC
+  federated so no secret is stored, and the script refuses to treat an implausibly short response as
+  drift, since an under-permissioned identity returns a truncated list rather than an error.
 
 ### Changed
 
+- `deploy/tenant-settings.all.bicepparam` becomes `deploy/tenant-settings.baseline.bicepparam` and
+  now asserts the recommended posture instead of a snapshot. Of 169 settings it asserts 104, leaves
+  60 commented out as `DECIDE`, and excludes the 5 Advanced networking ones, which need their own
+  sequenced rollout rather than a bulk apply.
 - README restructured to lead with what the repo does and why, a worked Bicep example, and a table of
   the layout rather than a bare list.
 

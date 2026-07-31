@@ -173,6 +173,40 @@ If a setting appears in the tenant with no posture in the map, the script warns 
 
 For a local working copy with real group IDs and current values, regenerate without `-Sanitise` or `-Baseline` into `main.local.bicepparam`, which is gitignored.
 
+### Catching new settings automatically
+
+Microsoft adds tenant settings continuously, so a baseline is only accurate on the day it's written. `.github/workflows/check-tenant-settings.yml` runs weekly (Mondays, 08:00 UTC) and on demand:
+
+1. Reads the live tenant through the read-only admin API.
+2. Compares it against `scripts/baseline.json`.
+3. Regenerates `deploy/tenant-settings.baseline.bicepparam`.
+4. Opens a PR if anything moved, with a summary table of the new settings, which group they're in, and whether they're currently on.
+
+**It never assigns a posture to a new setting.** Posture is a judgement call, so new settings land in the generated file as commented-out `DECIDE` entries, which are inert on deploy. The PR is a prompt to classify them in `baseline.json` and write them up in the guidance, not something to merge blind.
+
+Run the same check locally with `./scripts/check-tenant-settings-drift.ps1`. It exits 0 when clean and 1 when something changed.
+
+#### One-time setup
+
+The workflow authenticates with OIDC federation, so no client secret is stored. Against the app registration this repo already uses:
+
+```bash
+# Federated credential for scheduled runs on the default branch
+az ad app federated-credential create --id <appId> --parameters '{
+  "name": "github-tenant-settings-check",
+  "issuer": "https://token.actions.githubusercontent.com",
+  "subject": "repo:awood-ops/bicep-fabric-extension:ref:refs/heads/main",
+  "audiences": ["api://AzureADTokenExchange"]
+}'
+
+gh variable set FABRIC_READER_CLIENT_ID --body "<appId>"
+gh variable set FABRIC_TENANT_ID --body "<tenantId>"
+```
+
+The service principal needs read-only admin API access, so it must sit in the group allow-listed against `AllowServicePrincipalsUseReadAdminAPIs`. It does **not** need write access, since the workflow only reads.
+
+A scoped-down identity returns a *shorter list* rather than an error, which would read as Microsoft having retired dozens of settings. The script guards against that by failing outright if fewer than 50 settings come back.
+
 **The optional properties aren't valid on every setting.** `enabledSecurityGroups`/`excludedSecurityGroups` only apply where `canSpecifySecurityGroups` is true, and `delegateToWorkspace` only where the setting is delegatable; the update endpoint rejects them elsewhere. The extension builds its request body as a dictionary and omits anything left unset, so *omit the key entirely* rather than passing an empty array or `false`, because those are real values and get sent. `-AsBicepParam` already emits only the properties each setting supports.
 
 Failures now surface the API's response body rather than a bare status code, since a 400 here almost always names the property it objected to.
