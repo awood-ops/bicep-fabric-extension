@@ -73,7 +73,7 @@ match.
 
 ## Architecture
 
-Three deployment surfaces (ARM, Entra, the local extension process) feeding into one Fabric tenant, plus the one workaround (Entra ID) that doesn't go through Bicep at all:
+Three deployment surfaces (ARM, Entra, the local extension process) feeding into one Fabric tenant, plus the one step (the app registration) that doesn't go through Bicep at all:
 
 ```mermaid
 flowchart TD
@@ -82,7 +82,7 @@ flowchart TD
     end
 
     subgraph entra["Entra ID"]
-        cli["az ad app create<br/>az ad sp create<br/>(workaround, not Bicep)"] --> sp["App registration +<br/>Service Principal"]
+        cli["az ad app create<br/>az ad sp create<br/>(az CLI, not Bicep)"] --> sp["App registration +<br/>Service Principal"]
         sp --> id["identity/main.bicep"]
         id --> groups["4 RBAC groups +<br/>Key Vault"]
     end
@@ -111,25 +111,13 @@ flowchart TD
 
 The double arrows are the whole point of this repo: `bicep local-deploy` doesn't hand `Domain`/`Workspace`/`TenantSetting` to Azure Resource Manager at all. It spawns `bicep-ext-fabric` as a real process on whatever machine ran the command, talks to it over the Bicep Extensibility Protocol, and that process makes the actual HTTPS calls to `api.fabric.microsoft.com` itself. Every other box in this diagram is a normal ARM or Graph resource; these three aren't, which is the gap this whole lab exists to close.
 
-## A known Graph extension limitation (fixed upstream as of the last check)
-
-**Update:** re-tested this immediately before publishing, against the same Bicep CLI and extension versions below, and it's fixed, `appId`/`id` are readable again, no workaround needed. Leaving this section as-is since the workaround is still what `identity/main.bicep` actually does today (re-plumbing it back to pure Bicep hasn't been done yet), but if you're starting fresh, try creating `fabricExtApp`/`fabricExtSp` directly in Bicep first, it might just work now.
-
-The Microsoft Graph Bicep extension's ARM-side handler for `Microsoft.Graph/applications` used to not expose `appId` or `id` back out at all, not as a cross-resource reference, not even as a plain output on the same resource:
-
-```
-The language expression property 'appId' doesn't exist,
-available properties are 'uniqueName, displayName, owners'.
-```
-
-That rules out creating the app registration and service principal via Bicep if you need their IDs for anything downstream, which you always do. The workaround used here: create them with plain `az ad app create` / `az ad sp create`, and pass the resulting object IDs into `identity/main.bicep` as parameters (`spObjectId`) instead. Everything else, the four RBAC groups, the Key Vault, the role assignment, stays declarative.
-
 ## Running it
 
 Requires .NET 10 SDK and Bicep CLI 0.44.1+.
 
 ```bash
-# One-time: app registration + service principal (see "A known Graph extension limitation" above)
+# One-time: app registration + service principal. Created here rather than in identity/main.bicep,
+# which takes the resulting object ID as its spObjectId param. Everything else stays declarative.
 az ad app create --display-name "bicep-fabric-local-ext-lab"
 az ad sp create --id <appId-from-above>
 az ad app credential reset --id <appId-from-above> --display-name "bicep-local-deploy-lab"
