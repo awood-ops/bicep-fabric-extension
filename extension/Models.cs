@@ -92,6 +92,35 @@ public class TenantSetting : TenantSettingIdentifiers
         "are delegatable; omitted from the update payload when unset rather than defaulting to false, so " +
         "a non-delegatable setting isn't sent a property it will reject.")]
     public bool? DelegateToWorkspace { get; set; }
+
+    [TypeProperty(
+        "Whether capacity admins may override this setting at capacity level. Same omit-when-unset rule as " +
+        "DelegateToWorkspace - the three delegation scopes are independent, and a given setting supports " +
+        "none, one, or several of them.")]
+    public bool? DelegateToCapacity { get; set; }
+
+    [TypeProperty(
+        "Whether domain admins may override this setting at domain level. Same omit-when-unset rule as the " +
+        "other two delegation scopes.")]
+    public bool? DelegateToDomain { get; set; }
+
+    [TypeProperty(
+        "Additional typed values carried by a handful of settings that need more than an on/off flag - " +
+        "e.g. ConfigureFabricIdentityTenantLimit carries an Integer. Left unset the key is omitted, which " +
+        "is what the overwhelming majority of settings want.")]
+    public TenantSettingProperty[]? Properties { get; set; }
+}
+
+public class TenantSettingProperty
+{
+    [TypeProperty("The property's name, as returned by GET /v1/admin/tenantsettings.", ObjectTypePropertyFlags.Required)]
+    public required string Name { get; set; }
+
+    [TypeProperty("The property's value, sent as a string regardless of Type.", ObjectTypePropertyFlags.Required)]
+    public required string Value { get; set; }
+
+    [TypeProperty("The property's declared type, e.g. 'Integer' or 'FreeText'.", ObjectTypePropertyFlags.Required)]
+    public required string Type { get; set; }
 }
 
 public class TenantSettingSecurityGroup

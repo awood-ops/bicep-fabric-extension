@@ -33,7 +33,9 @@ param tenantSettings = [
     enabled: true
   }
   {
-    name: 'CreateWorkspaces'
+    // Portal title is "Create workspaces" - the technical name keeps the legacy "App" in it, which is
+    // exactly why these have to be read from the API rather than inferred from the portal.
+    name: 'CreateAppWorkspaces'
     enabled: true
   }
 ]

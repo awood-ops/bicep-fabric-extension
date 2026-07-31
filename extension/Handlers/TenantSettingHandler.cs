@@ -53,9 +53,28 @@ public class TenantSettingHandler(IHttpClientFactory httpClientFactory) : TypedR
             body["excludedSecurityGroups"] = MapGroups(setting.ExcludedSecurityGroups);
         }
 
+        // Three independent delegation scopes - a setting supports none, one, or several of them, and the
+        // GET response simply omits the ones that don't apply. Mirror that on the way back in.
         if (setting.DelegateToWorkspace is not null)
         {
             body["delegateToWorkspace"] = setting.DelegateToWorkspace.Value;
+        }
+
+        if (setting.DelegateToCapacity is not null)
+        {
+            body["delegateToCapacity"] = setting.DelegateToCapacity.Value;
+        }
+
+        if (setting.DelegateToDomain is not null)
+        {
+            body["delegateToDomain"] = setting.DelegateToDomain.Value;
+        }
+
+        if (setting.Properties is not null)
+        {
+            body["properties"] = setting.Properties
+                .Select(p => new { name = p.Name, value = p.Value, type = p.Type })
+                .ToArray();
         }
 
         using var response = await http.PostAsJsonAsync($"{BaseUrl}/admin/tenantsettings/{setting.Name}/update", body, cancellationToken);

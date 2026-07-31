@@ -93,6 +93,9 @@ resource tenantSetting 'TenantSetting' = [for ts in tenantSettings: {
   enabledSecurityGroups: ts.?enabledSecurityGroups
   excludedSecurityGroups: ts.?excludedSecurityGroups
   delegateToWorkspace: ts.?delegateToWorkspace
+  delegateToCapacity: ts.?delegateToCapacity
+  delegateToDomain: ts.?delegateToDomain
+  properties: ts.?properties
 }]
 
 output domainIds array = [for i in range(0, length(domains)): domain[i].id]

@@ -58,7 +58,8 @@ if ($Filter) {
 $settings = @($settings | Sort-Object settingName)
 
 if (-not $AsBicepParam) {
-    $settings | Select-Object settingName, title, enabled, canSpecifySecurityGroups, delegateToWorkspace, tenantSettingGroup
+    $settings | Select-Object settingName, title, enabled, canSpecifySecurityGroups,
+        delegateToWorkspace, delegateToCapacity, delegateToDomain, tenantSettingGroup
     return
 }
 
@@ -92,10 +93,26 @@ foreach ($s in $settings) {
         if ($excludedGroups) { [void]$sb.AppendLine($excludedGroups) }
     }
 
-    # delegateToWorkspace is absent from the GET payload entirely for settings that can't be
-    # delegated, so a null check is the signal - not $false, which is a real, valid value.
-    if ($null -ne $s.delegateToWorkspace) {
-        [void]$sb.AppendLine("    delegateToWorkspace: $($s.delegateToWorkspace.ToString().ToLowerInvariant())")
+    # The delegation flags are absent from the GET payload entirely for settings that don't support
+    # that scope, so a null check is the signal - not $false, which is a real, valid value. The three
+    # scopes are independent; a setting can support any combination of them.
+    foreach ($scope in 'delegateToWorkspace', 'delegateToCapacity', 'delegateToDomain') {
+        if ($null -ne $s.$scope) {
+            [void]$sb.AppendLine("    ${scope}: $($s.$scope.ToString().ToLowerInvariant())")
+        }
+    }
+
+    # A handful of settings carry typed values beyond the on/off flag.
+    if ($s.properties -and @($s.properties).Count -gt 0) {
+        [void]$sb.AppendLine('    properties: [')
+        foreach ($p in $s.properties) {
+            [void]$sb.AppendLine('      {')
+            [void]$sb.AppendLine("        name: '$($p.name)'")
+            [void]$sb.AppendLine("        value: '$($p.value)'")
+            [void]$sb.AppendLine("        type: '$($p.type)'")
+            [void]$sb.AppendLine('      }')
+        }
+        [void]$sb.AppendLine('    ]')
     }
 
     [void]$sb.AppendLine('  }')
