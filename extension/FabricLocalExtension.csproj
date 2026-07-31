@@ -10,6 +10,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Single source of truth for the extension version. Program.cs reads it back off the assembly
+         rather than repeating the literal, so cutting a release touches this line and the CHANGELOG
+         and nothing else. Keep it in step with the git tag: v0.2.0 -> 0.2.0. -->
+    <Version>0.2.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

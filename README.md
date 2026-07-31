@@ -12,6 +12,17 @@ Written up in full on the blog: [awood.tech](https://awood.tech).
 - `deploy/` - the `.bicep`/`.bicepparam` that declares domains, nested domains, workspaces (assigned to domains), and tenant settings, all via the extension
 - `scripts/` - `get-tenant-settings.ps1`, which dumps the tenant's live settings (optionally as a ready-to-paste `param tenantSettings = [...]` block) so the param file can be seeded from what the tenant actually has rather than hand-transcribed
 
+## Versioning
+
+[SemVer](https://semver.org/spec/v2.0.0.html), with changes recorded in [CHANGELOG.md](CHANGELOG.md)
+per [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Pre-1.0, so breaking changes can land
+in a minor bump — the changelog flags them.
+
+The version is declared once, as `<Version>` in `extension/FabricLocalExtension.csproj`, and read off
+the assembly at startup rather than repeated as a literal. Cutting a release means bumping that,
+moving the `Unreleased` changelog entries under the new heading, and tagging `vMAJOR.MINOR.PATCH` to
+match.
+
 ## Architecture
 
 Three deployment surfaces (ARM, Entra, the local extension process) feeding into one Fabric tenant, plus the one workaround (Entra ID) that doesn't go through Bicep at all:
