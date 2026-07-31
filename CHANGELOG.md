@@ -11,6 +11,19 @@ and read back off the assembly at startup. Tags are `vMAJOR.MINOR.PATCH` and mat
 
 ## [Unreleased]
 
+### Added
+
+- `docs/tenant-settings-guidance.md` — rationale and a preferred posture for all 169 tenant settings,
+  grounded in the Fabric tenant settings index, the Well-Architected security guidance, and the
+  Microsoft cloud security benchmark baseline for Fabric.
+- `-Sanitise` switch on `scripts/get-tenant-settings.ps1`, replacing security group object IDs and
+  names with placeholders for output destined somewhere public.
+
+### Changed
+
+- README restructured — what the repo does and why up front, a worked Bicep example, and a table of
+  the layout rather than a bare list.
+
 ## [0.2.0] - 2026-07-31
 
 ### Added

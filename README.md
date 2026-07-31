@@ -1,16 +1,64 @@
 # bicep-fabric-extension
 
-A [Bicep local extension](https://github.com/Azure/bicep/blob/main/docs/experimental/local-deploy-dotnet-quickstart.md) for Microsoft Fabric, covering `Workspace`, `Domain`, and `TenantSetting` resources (`Create`/`Delete`, `Create`/`Update` for the latter), plus the Entra security groups, service principal, Fabric capacity, and Key Vault around it, all declared as Bicep.
+[![Bicep](https://img.shields.io/badge/Bicep-local%20extension-0078D4?logo=microsoftazure&logoColor=white)](https://github.com/Azure/bicep/blob/main/docs/experimental/local-deploy-dotnet-quickstart.md)
+[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](extension/FabricLocalExtension.csproj)
+[![Version](https://img.shields.io/badge/version-0.2.0-brightgreen)](CHANGELOG.md)
+[![Fabric tenant settings](https://img.shields.io/badge/tenant%20settings-169%20documented-0078D4)](docs/tenant-settings-guidance.md)
 
-Written up in full on the blog: [awood.tech](https://awood.tech).
+**Manage Microsoft Fabric as infrastructure-as-code.** Workspaces, domains, and all 169 tenant
+settings, declared in Bicep and deployed with `bicep local-deploy` — no portal clicking, no
+imperative REST scripts.
 
-## Layout
+Fabric has no ARM resource provider for these objects. This repo closes that gap with a [Bicep local
+extension](https://github.com/Azure/bicep/blob/main/docs/experimental/local-deploy-dotnet-quickstart.md):
+a .NET process that Bicep spawns on your machine and talks to over the Bicep Extensibility Protocol,
+which then calls the Fabric REST API directly.
 
-- `capacity/` - Fabric F2 capacity via the [AVM module](https://github.com/Azure/bicep-registry-modules/tree/main/avm/res/fabric/capacity)
-- `identity/` - four Entra security groups (one per Fabric workspace role) plus a Key Vault, via the [Microsoft Graph Bicep extension](https://learn.microsoft.com/en-us/graph/templates/bicep/whats-new). Takes the extension's app/service principal object ID as a param rather than creating them, see the note below.
-- `extension/` - the local extension itself (.NET, `Azure.Bicep.Local.Extension`), with `Workspace`, `Domain`, and `TenantSetting` resource handlers
-- `deploy/` - the `.bicep`/`.bicepparam` that declares domains, nested domains, workspaces (assigned to domains), and tenant settings, all via the extension
-- `scripts/` - `get-tenant-settings.ps1`, which dumps the tenant's live settings (optionally as a ready-to-paste `param tenantSettings = [...]` block) so the param file can be seeded from what the tenant actually has rather than hand-transcribed
+```bicep
+targetScope = 'local'
+extension fabric
+
+resource domain 'Domain' = {
+  displayName: 'dev_domain_fabric'
+  adminGroupIds: [ dataStewardsGroupId ]
+}
+
+resource ws 'Workspace' = {
+  displayName: 'ws-dev-analytics'
+  adminObjectId: myObjectId
+  domainId: domain.id
+}
+
+resource setting 'TenantSetting' = {
+  name: 'PublishToWeb'      // anonymous public report exposure
+  enabled: false            // ...declared off, and stays off
+}
+```
+
+> Written up in full on the blog: **[awood.tech](https://awood.tech)**
+
+---
+
+## What's here
+
+| Path | What it does |
+| --- | --- |
+| **`extension/`** | The local extension itself — .NET 10, `Azure.Bicep.Local.Extension`, with `Workspace`, `Domain`, and `TenantSetting` resource handlers |
+| **`deploy/`** | The template declaring domains, nested domains, workspaces (assigned to domains), and tenant settings, all through the extension |
+| **`identity/`** | Four Entra security groups (one per Fabric workspace role) plus a Key Vault, via the [Microsoft Graph Bicep extension](https://learn.microsoft.com/en-us/graph/templates/bicep/whats-new) |
+| **`capacity/`** | Fabric F2 capacity via the [AVM module](https://github.com/Azure/bicep-registry-modules/tree/main/avm/res/fabric/capacity) |
+| **`scripts/`** | `get-tenant-settings.ps1` — dumps the tenant's live settings as a paste-ready `param tenantSettings = [...]` block, with `-Sanitise` for public output |
+| **`docs/`** | [**Tenant settings guidance**](docs/tenant-settings-guidance.md) — what all 169 settings do, a preferred posture for each, and why |
+
+## Why bother
+
+Fabric tenant settings are a genuine governance problem: **169 switches, 107 of them scopable to
+security groups, defaulting to convenience over security**, and addressed by technical names the
+portal never shows you. The portal's "Create workspaces" is the API's `CreateAppWorkspaces`.
+
+Microsoft's [Well-Architected guidance](https://learn.microsoft.com/en-us/azure/well-architected/microsoft-fabric/security)
+recommends tracking tenant settings through the admin APIs and comparing them against a baseline to
+detect drift. That's exactly what this gives you — the baseline is a Bicep file, and drift is a diff.
 
 ## Versioning
 
@@ -119,6 +167,11 @@ cd scripts
 ```
 
 That reads `GET /v1/admin/tenantsettings` as whoever's logged into `az login`, so run it as a Fabric Administrator — a scoped-down identity quietly returns a shorter list rather than failing.
+
+For what each setting actually does and a defensible default for it, see
+[**docs/tenant-settings-guidance.md**](docs/tenant-settings-guidance.md) — all 169 settings with a
+preferred posture and the reasoning, grounded in the Well-Architected security guidance and the
+Microsoft cloud security benchmark baseline.
 
 `deploy/tenant-settings.all.bicepparam` is a checked-in capture of all 169 settings this tenant exposes, as a reference for the names and which properties each one supports. It's generated with `-Sanitise`, so group object IDs are placeholders. Treat it as something to copy entries *out of* into `main.bicepparam` rather than a file to deploy — applying it wholesale asserts all 169 settings, including turning off everything currently off. For a local working copy with real group IDs, regenerate without `-Sanitise` into `main.local.bicepparam`, which is gitignored.
 
