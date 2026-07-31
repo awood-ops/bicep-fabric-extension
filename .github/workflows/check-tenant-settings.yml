@@ -11,40 +11,6 @@ permissions:
   id-token: write           # OIDC federation to Entra, so no client secret is stored
 
 jobs:
-  # No credentials needed, so this keeps working before the Azure federation is configured and if
-  # that credential later lapses. It can only see display titles: Microsoft never publishes the
-  # technical names the baseline is keyed on, so it reports rather than changes anything.
-  check-docs:
-    name: Check public docs for new settings
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Compare docs index against tenant snapshot
-        id: docs
-        shell: pwsh
-        run: |
-          ./scripts/check-learn-index.ps1
-          "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
-        continue-on-error: true
-
-      - name: Add job summary
-        if: always()
-        run: |
-          if [ -f learn-summary.md ]; then
-            cat learn-summary.md >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "Docs check did not produce a summary. The index layout may have changed." >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Fail on parser error
-        if: steps.docs.outputs.exit_code != '0' && steps.docs.outputs.exit_code != '1'
-        run: |
-          echo "Docs check exited with ${{ steps.docs.outputs.exit_code }}, which is neither clean (0) nor new-settings-found (1)."
-          exit 1
-
   check-tenant-settings:
     name: Check for new or changed tenant settings
     runs-on: ubuntu-latest

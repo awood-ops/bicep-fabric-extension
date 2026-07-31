@@ -186,17 +186,6 @@ Microsoft adds tenant settings continuously, so a baseline is only accurate on t
 
 Run the same check locally with `./scripts/check-tenant-settings-drift.ps1`. It exits 0 when clean and 1 when something changed.
 
-#### Why this reads the tenant rather than the docs
-
-Reasonable question, since Microsoft publishes a [tenant settings index](https://learn.microsoft.com/en-us/fabric/admin/tenant-settings-index) and reading it needs no credentials. It can't be the primary source, for two reasons:
-
-- **The docs never publish technical names.** `baseline.json` and the param file are keyed on `settingName` (`CreateAppWorkspaces`), and the docs only ever show the display title ("Create workspaces"). Not one technical name appears anywhere in the `fabric-docs` repo, so the docs can tell you a setting exists but not what to write in the map.
-- **The docs aren't your tenant.** Settings vary by licence, region, and preview enrolment. At the last check the index documented 169 and this tenant exposed 169, but with four differences in each direction.
-
-So the docs check runs as a **second, unauthenticated job** rather than a replacement. It compares the index against `scripts/known-titles.json` (snapshotted from the tenant by `regenerate-baseline.ps1`) and reports settings documented but not yet present. That catches previews before they land, and keeps working before the Azure federation is set up or if that credential lapses. Run it locally with `./scripts/check-learn-index.ps1`.
-
-It matches on title text, so a Microsoft rewording shows up as a new setting. Cheap to dismiss, and better than missing a real one.
-
 #### One-time setup
 
 The workflow authenticates with OIDC federation, so no client secret is stored. Against the app registration this repo already uses:
