@@ -22,21 +22,19 @@ domainName, if set, must match the name of an entry in either domains or childDo
 param workspaces array = []
 
 @description('''
-Object ID of the extension's own automation group. Workspace creation itself
-(ServicePrincipalAccessGlobalAPIs) is already enabled tenant-wide with no group restriction, so
-this isn't needed for that - it's used below to keep the tenant's admin-API access setting pointed
-at a real group instead of a dead one.
-''')
-param spCreatorsGroupId string
+Tenant settings to manage declaratively. Each entry:
+{ name, enabled, enabledSecurityGroups?, excludedSecurityGroups?, delegateToWorkspace? }.
 
-@description('Display name of that same group, echoed back into the tenant setting payload.')
-param spCreatorsGroupName string = 'sg-fabric-sp-workspace-creators'
+name is the setting's technical name exactly as returned by GET /v1/admin/tenantsettings for this
+tenant - look these up rather than guessing, the portal's display titles are not the API names.
+scripts/get-tenant-settings.ps1 dumps the live list in this shape to seed this array.
 
-@description('''
-Technical name of the tenant setting this template manages declaratively, as returned by
-GET /v1/admin/tenantsettings for this tenant. No default - look this up rather than guessing.
+The security-group arrays and delegateToWorkspace are only valid on settings that actually support
+them (canSpecifySecurityGroups / delegatable in the GET response). Omit the key entirely rather than
+passing an empty array or false where it doesn't apply - the extension leaves unset properties out of
+the update payload, and the API rejects them on settings that don't accept them.
 ''')
-param tenantSettingName string
+param tenantSettings array = []
 
 // Compile-time-only lookups (names, not runtime resource properties) - a var may not embed a
 // resource's runtime output (e.g. domain[i].id) per BCP182, so the actual id resolution has to
@@ -79,20 +77,23 @@ resource ws 'Workspace' = [for w in workspaces: {
     : childDomain[max(indexOf(childDomainNames, w.domainName), 0)].id)
 }]
 
-// Declarative version of the same tenant-setting call the lab's cleanup step already makes
-// imperatively via a raw REST call - this closes that loop by driving it from the template instead.
-// Bootstrapped manually once (this SP can't call the admin API to grant itself admin API access),
-// then owned by this resource from here on.
-resource adminApiAccessSetting 'TenantSetting' = {
-  name: tenantSettingName
-  enabled: true
-  enabledSecurityGroups: [
-    {
-      graphId: spCreatorsGroupId
-      name: spCreatorsGroupName
-    }
-  ]
-}
+// Declarative version of the same tenant-setting calls the lab's cleanup step already makes
+// imperatively via raw REST - this closes that loop by driving them from the template instead.
+// The admin-API access setting has to be bootstrapped manually once (this SP can't call the admin
+// API to grant itself admin API access), then it's owned from here on along with everything else.
+//
+// .? throughout for the same reason as the domains loop above: tenantSettings is an untyped array
+// param, so a genuinely absent key needs safe-dereference to evaluate to null. Here that null is
+// load-bearing rather than cosmetic - the handler omits null properties from the update payload,
+// which is what keeps a non-delegatable or non-group-scopable setting from being sent a property
+// the API will reject.
+resource tenantSetting 'TenantSetting' = [for ts in tenantSettings: {
+  name: ts.name
+  enabled: ts.enabled
+  enabledSecurityGroups: ts.?enabledSecurityGroups
+  excludedSecurityGroups: ts.?excludedSecurityGroups
+  delegateToWorkspace: ts.?delegateToWorkspace
+}]
 
 output domainIds array = [for i in range(0, length(domains)): domain[i].id]
 output childDomainIds array = [for i in range(0, length(childDomains)): childDomain[i].id]

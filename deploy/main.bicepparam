@@ -1,7 +1,42 @@
 using 'main.bicep'
 
-param spCreatorsGroupId = '<spCreatorsGroupId output from identity/main.bicep>'
-param tenantSettingName = '<technical name from GET /v1/admin/tenantsettings for this tenant, e.g. AllowServicePrincipalsUseWriteAdminAPIs>'
+// Technical names, not portal display titles - the two don't match. Seed this array from the live
+// tenant with scripts/get-tenant-settings.ps1 rather than transcribing by hand; the names below are
+// the ones this lab actually depends on and are here as a worked example of the shape.
+//
+// enabledSecurityGroups / delegateToWorkspace are only included on settings that support them.
+// AllowServicePrincipalsUseWriteAdminAPIs is the bootstrap one - it has to be granted once by a
+// human/delegated token before the SP can manage any of this, including itself.
+param tenantSettings = [
+  {
+    name: 'AllowServicePrincipalsUseWriteAdminAPIs'
+    enabled: true
+    enabledSecurityGroups: [
+      {
+        graphId: '<spCreatorsGroupId output from identity/main.bicep>'
+        name: 'sg-fabric-sp-workspace-creators'
+      }
+    ]
+  }
+  {
+    name: 'AllowServicePrincipalsUseReadAdminAPIs'
+    enabled: true
+    enabledSecurityGroups: [
+      {
+        graphId: '<spCreatorsGroupId output from identity/main.bicep>'
+        name: 'sg-fabric-sp-workspace-creators'
+      }
+    ]
+  }
+  {
+    name: 'ServicePrincipalAccessGlobalAPIs'
+    enabled: true
+  }
+  {
+    name: 'CreateWorkspaces'
+    enabled: true
+  }
+]
 
 param domains = [
   {

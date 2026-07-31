@@ -80,6 +80,18 @@ public class TenantSetting : TenantSettingIdentifiers
         "shape directly. Fabric tenant settings have no real delete operation, so removing this resource " +
         "from a template disables the setting and clears this list rather than deleting anything.")]
     public TenantSettingSecurityGroup[]? EnabledSecurityGroups { get; set; }
+
+    [TypeProperty(
+        "Entra security groups explicitly excluded from the setting. Only meaningful for settings whose " +
+        "canSpecifySecurityGroups is true; left unset the property is omitted from the update payload " +
+        "entirely, since sending it against a setting that doesn't support group scoping is rejected.")]
+    public TenantSettingSecurityGroup[]? ExcludedSecurityGroups { get; set; }
+
+    [TypeProperty(
+        "Whether workspace admins may override this setting at workspace level. Only a subset of settings " +
+        "are delegatable; omitted from the update payload when unset rather than defaulting to false, so " +
+        "a non-delegatable setting isn't sent a property it will reject.")]
+    public bool? DelegateToWorkspace { get; set; }
 }
 
 public class TenantSettingSecurityGroup

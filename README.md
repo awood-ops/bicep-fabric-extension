@@ -9,7 +9,8 @@ Written up in full on the blog: [awood.tech](https://awood.tech).
 - `capacity/` - Fabric F2 capacity via the [AVM module](https://github.com/Azure/bicep-registry-modules/tree/main/avm/res/fabric/capacity)
 - `identity/` - four Entra security groups (one per Fabric workspace role) plus a Key Vault, via the [Microsoft Graph Bicep extension](https://learn.microsoft.com/en-us/graph/templates/bicep/whats-new). Takes the extension's app/service principal object ID as a param rather than creating them, see the note below.
 - `extension/` - the local extension itself (.NET, `Azure.Bicep.Local.Extension`), with `Workspace`, `Domain`, and `TenantSetting` resource handlers
-- `deploy/` - the `.bicep`/`.bicepparam` that declares domains, nested domains, workspaces (assigned to domains), and a tenant setting, all via the extension
+- `deploy/` - the `.bicep`/`.bicepparam` that declares domains, nested domains, workspaces (assigned to domains), and tenant settings, all via the extension
+- `scripts/` - `get-tenant-settings.ps1`, which dumps the tenant's live settings (optionally as a ready-to-paste `param tenantSettings = [...]` block) so the param file can be seeded from what the tenant actually has rather than hand-transcribed
 
 ## Architecture
 
@@ -91,6 +92,26 @@ bicep local-deploy main.bicepparam
 ```
 
 The service principal needs to be allow-listed against several Fabric tenant settings first: "Service principals can create workspaces..." and "Service principals can call Fabric public APIs" for `Workspace`, plus "Service principals can access read-only admin APIs" and "...admin APIs used for updates" for `Domain` and `TenantSetting` (the latter two have to be granted by a human/delegated token first, a service principal can't grant itself admin API access). See the blog post for the full setup, including gotchas around capacity-level Contributor permissions, a stale security group that silently blocked admin API access, and a few Bicep language quirks (self-referencing resource loops, a ternary over resource-array indices that doesn't behave the way the docs say it should, and the `.?` safe-dereference operator).
+
+### Managing tenant settings
+
+`deploy/main.bicep` takes a `tenantSettings` array, so any number of settings can be declared rather than the single one this started with. Each entry is `{ name, enabled, enabledSecurityGroups?, excludedSecurityGroups?, delegateToWorkspace? }`.
+
+Two things make this fiddlier than it looks:
+
+**The name is the API's technical name, not the portal's display title**, and they don't match — the portal's "Service principals can use Fabric APIs" is `ServicePrincipalAccessGlobalAPIs`. Guessing doesn't work. Dump the live list instead:
+
+```powershell
+cd scripts
+./get-tenant-settings.ps1 -Filter '*ServicePrincipal*'          # browse
+./get-tenant-settings.ps1 -AsBicepParam -EnabledOnly            # emit a paste-ready param block
+```
+
+That reads `GET /v1/admin/tenantsettings` as whoever's logged into `az login`, so run it as a Fabric Administrator — a scoped-down identity quietly returns a shorter list rather than failing.
+
+**The optional properties aren't valid on every setting.** `enabledSecurityGroups`/`excludedSecurityGroups` only apply where `canSpecifySecurityGroups` is true, and `delegateToWorkspace` only where the setting is delegatable; the update endpoint rejects them elsewhere. The extension builds its request body as a dictionary and omits anything left unset, so *omit the key entirely* rather than passing an empty array or `false` — those are real values and get sent. `-AsBicepParam` already emits only the properties each setting supports.
+
+Failures now surface the API's response body rather than a bare status code, since a 400 here almost always names the property it objected to.
 
 ### Running as yourself instead of the service principal
 
