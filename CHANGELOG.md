@@ -4,7 +4,7 @@ All notable changes to this project are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versioning follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While this is pre-1.0, breaking changes
-can land in a minor bump — they're called out explicitly below.
+can land in a minor bump, and they're called out explicitly below.
 
 The version here is the extension's own version, declared once in `extension/FabricLocalExtension.csproj`
 and read back off the assembly at startup. Tags are `vMAJOR.MINOR.PATCH` and match it.
@@ -13,7 +13,7 @@ and read back off the assembly at startup. Tags are `vMAJOR.MINOR.PATCH` and mat
 
 ### Added
 
-- `docs/tenant-settings-guidance.md` — rationale and a preferred posture for all 169 tenant settings,
+- `docs/tenant-settings-guidance.md`, giving rationale and a preferred posture for all 169 tenant settings,
   grounded in the Fabric tenant settings index, the Well-Architected security guidance, and the
   Microsoft cloud security benchmark baseline for Fabric.
 - `-Sanitise` switch on `scripts/get-tenant-settings.ps1`, replacing security group object IDs and
@@ -21,7 +21,7 @@ and read back off the assembly at startup. Tags are `vMAJOR.MINOR.PATCH` and mat
 
 ### Changed
 
-- README restructured — what the repo does and why up front, a worked Bicep example, and a table of
+- README restructured to lead with what the repo does and why, a worked Bicep example, and a table of
   the layout rather than a bare list.
 
 ## [0.2.0] - 2026-07-31
@@ -35,12 +35,12 @@ and read back off the assembly at startup. Tags are `vMAJOR.MINOR.PATCH` and mat
   combination of them.
 - `properties` on `TenantSetting`, for the handful of settings carrying typed values beyond the
   on/off flag (e.g. `ConfigureFabricIdentityTenantLimit`, which holds an `Integer`).
-- `excludedSecurityGroups` on `TenantSetting`, from the API contract — no setting in the tenant this
+- `excludedSecurityGroups` on `TenantSetting`, from the API contract. No setting in the tenant this
   was built against actually populates it.
 - `scripts/get-tenant-settings.ps1`, which dumps the tenant's live settings, optionally as a
   paste-ready `param tenantSettings = [...]` block. `-Sanitise` replaces security group object IDs
   and names with placeholders for output destined somewhere public.
-- `deploy/tenant-settings.all.bicepparam` — a sanitised capture of all 169 settings the reference
+- `deploy/tenant-settings.all.bicepparam`, a sanitised capture of all 169 settings the reference
   tenant exposes, as a lookup for names and supported properties. Intended to copy entries out of,
   not to deploy: applying it wholesale asserts every setting, including the ones currently off.
 
@@ -64,7 +64,7 @@ and read back off the assembly at startup. Tags are `vMAJOR.MINOR.PATCH` and mat
 ### Fixed
 
 - The example params referenced a tenant setting named `CreateWorkspaces`, which doesn't exist. The
-  real name is `CreateAppWorkspaces` — the portal shows "Create workspaces" while the API kept the
+  real name is `CreateAppWorkspaces`. The portal shows "Create workspaces" while the API kept the
   legacy "App", which is the whole reason these need reading from the API rather than inferring.
 
 ## [0.1.0] - 2026-07-30

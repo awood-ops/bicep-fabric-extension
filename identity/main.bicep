@@ -70,7 +70,7 @@ resource sgSpWorkspaceCreators 'Microsoft.Graph/groups@v1.0' = {
 }
 
 // The workspace's own service principal is the officially-supported identity for Key Vault
-// access — Fabric's "workspace identity" feature doesn't list Key Vault as a supported
+// access. Fabric's "workspace identity" feature doesn't list Key Vault as a supported
 // connection target (ADLS Gen2, SQL Server, Blobs and Azure Analysis Services only), so
 // Key Vault access is wired to this SP rather than to the workspace identity.
 resource keyVault 'Microsoft.KeyVault/vaults@2024-11-01' = {
