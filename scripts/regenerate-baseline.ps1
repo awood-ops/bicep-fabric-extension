@@ -19,7 +19,8 @@ Where to write the param file. Defaults to ../deploy/tenant-settings.baseline.bi
 [CmdletBinding()]
 param(
     [string]$BaselinePath = (Join-Path $PSScriptRoot 'baseline.json'),
-    [string]$ParamPath    = (Join-Path $PSScriptRoot '../deploy/tenant-settings.baseline.bicepparam')
+    [string]$ParamPath    = (Join-Path $PSScriptRoot '../deploy/tenant-settings.baseline.bicepparam'),
+    [string]$TitlesPath   = (Join-Path $PSScriptRoot 'known-titles.json')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -52,3 +53,26 @@ $content = ($header + ($body -join "`n")) -replace "`r`n", "`n"
 [System.IO.File]::WriteAllText((Resolve-Path -LiteralPath (Split-Path $ParamPath -Parent)).Path + [System.IO.Path]::DirectorySeparatorChar + (Split-Path $ParamPath -Leaf), $content, (New-Object System.Text.UTF8Encoding($false)))
 
 Write-Host "Wrote $ParamPath" -ForegroundColor Green
+
+# Also snapshot the display titles. Microsoft's public docs list settings by title only and never
+# publish the technical name, so a title snapshot is the only thing the docs can be diffed against.
+# That gives an auth-free early warning when a setting is documented before it reaches the tenant.
+$token = az account get-access-token --resource 'https://api.fabric.microsoft.com' --query accessToken -o tsv
+if ($LASTEXITCODE -ne 0 -or -not $token) { throw "Could not get a Fabric access token. Run 'az login' first." }
+$live = @((Invoke-RestMethod -Uri 'https://api.fabric.microsoft.com/v1/admin/tenantsettings' `
+    -Headers @{ Authorization = "Bearer $token" }).tenantSettings)
+
+$titles = [ordered]@{
+    '$comment' = @(
+        'Display titles of the tenant settings this tenant exposes, snapshotted by regenerate-baseline.ps1.',
+        'Exists only so check-learn-index.ps1 has something to diff the public docs against: Microsoft',
+        'documents settings by title and never publishes the technical name, so titles are the only',
+        'common key. Not used by the deployment itself.'
+    )
+    generated = (Get-Date -Format 'yyyy-MM-dd')
+    count     = $live.Count
+    titles    = @($live | ForEach-Object { ($_.title -replace '\s+', ' ').Trim() } | Sort-Object -Unique)
+}
+$json = ($titles | ConvertTo-Json -Depth 5) -replace "`r`n", "`n"
+[System.IO.File]::WriteAllText((Resolve-Path -LiteralPath (Split-Path $TitlesPath -Parent)).Path + [System.IO.Path]::DirectorySeparatorChar + (Split-Path $TitlesPath -Leaf), $json + "`n", (New-Object System.Text.UTF8Encoding($false)))
+Write-Host "Wrote $TitlesPath ($($live.Count) titles)" -ForegroundColor Green

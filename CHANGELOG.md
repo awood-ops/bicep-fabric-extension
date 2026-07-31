@@ -28,6 +28,11 @@ and read back off the assembly at startup. Tags are `vMAJOR.MINOR.PATCH` and mat
   automatically; they surface as commented-out `DECIDE` entries for a human to classify. Auth is OIDC
   federated so no secret is stored, and the script refuses to treat an implausibly short response as
   drift, since an under-permissioned identity returns a truncated list rather than an error.
+- `scripts/check-learn-index.ps1` and a second, unauthenticated workflow job that diffs Microsoft's
+  public tenant settings index against `scripts/known-titles.json`. It reports settings documented
+  but not yet in the tenant, catching previews before they land and continuing to work if the Azure
+  federation isn't configured or lapses. It can't replace the authenticated check: the docs publish
+  display titles only and never the technical names the baseline is keyed on.
 
 ### Changed
 
