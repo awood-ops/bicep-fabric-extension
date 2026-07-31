@@ -396,7 +396,7 @@ nearly always better than `On`. The Bicep model in this repo expresses that dire
 **Treat this as drift detection, not a one-off.** New settings appear regularly. This capture found
 169, and that number moves. The Well-Architected guidance is to compare live configuration against a
 baseline and alert on deviation; `scripts/get-tenant-settings.ps1` plus the checked-in
-`deploy/tenant-settings.all.bicepparam` is how that works here.
+`deploy/tenant-settings.baseline.bicepparam` is how that works here, with `scripts/baseline.json` holding the posture for each setting so this document's recommendations are machine-readable rather than prose only.
 
 ## Sources
 

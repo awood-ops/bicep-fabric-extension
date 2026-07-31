@@ -30,6 +30,12 @@ Replace security group object IDs and display names with placeholders. Use this 
 going somewhere public - group object IDs and naming conventions are tenant-identifying, and only a
 handful of settings carry them, so the rest of the output is unaffected.
 
+.PARAMETER Baseline
+Path to a posture map (baseline.json). Emits recommended values from the map instead of the tenant's
+current ones, turning the output from a snapshot into a starting baseline. Settings marked 'decide'
+are emitted commented out, 'excluded' ones are omitted, and anything in the tenant with no posture
+raises a warning rather than being guessed at.
+
 .EXAMPLE
 ./get-tenant-settings.ps1 -Filter '*ServicePrincipal*'
 
@@ -39,14 +45,15 @@ handful of settings carry them, so the rest of the output is unaffected.
 
 .EXAMPLE
 # Committable reference template, placeholders instead of group IDs
-./get-tenant-settings.ps1 -AsBicepParam -Sanitise > ../deploy/tenant-settings.all.bicepparam
+./get-tenant-settings.ps1 -AsBicepParam -Sanitise -Baseline ./baseline.json > ../deploy/tenant-settings.baseline.bicepparam
 #>
 [CmdletBinding()]
 param(
     [switch]$AsBicepParam,
     [switch]$EnabledOnly,
     [string]$Filter,
-    [switch]$Sanitise
+    [switch]$Sanitise,
+    [string]$Baseline
 )
 
 $ErrorActionPreference = 'Stop'
@@ -94,21 +101,84 @@ function Format-Groups {
     return "$Indent  ${Key}: [`n$($lines -join "`n")`n$Indent  ]"
 }
 
+# --- Baseline mode -----------------------------------------------------------------------------
+# Without -Baseline the emitted values are whatever the tenant currently has, so re-applying is a
+# no-op. With it, values come from the posture map instead, turning the output from a snapshot into
+# a recommendation. Postures are documented in baseline.json itself.
+$postures = $null
+if ($Baseline) {
+    if (-not (Test-Path $Baseline)) { throw "Baseline map not found: $Baseline" }
+    $postures = Get-Content $Baseline -Raw | ConvertFrom-Json
+
+    $mapped = $postures.PSObject.Properties.Name | Where-Object { $_ -ne '$comment' }
+    $unmapped = @($settings | Where-Object { $mapped -notcontains $_.settingName })
+    if ($unmapped.Count -gt 0) {
+        # A new setting appearing in the tenant with no posture is the drift case worth shouting
+        # about - it's a switch nobody has made a decision on yet.
+        Write-Warning "$($unmapped.Count) setting(s) have no posture in the baseline and will be emitted as 'decide':"
+        $unmapped | ForEach-Object { Write-Warning "  $($_.settingName)  ($($_.title))" }
+    }
+}
+
+function Get-Posture {
+    param($Setting)
+    if (-not $postures) { return 'live' }
+    $p = $postures.($Setting.settingName)
+    if (-not $p) { return 'decide' }
+
+    # A setting carrying a typed property needs a value to be meaningful. Where the tenant hasn't
+    # set one, asserting 'on' would push an empty value, so it drops to 'decide' instead.
+    if ($p -eq 'on' -and $Setting.properties) {
+        $blank = @($Setting.properties | Where-Object { [string]::IsNullOrWhiteSpace($_.value) })
+        if ($blank.Count -gt 0) { return 'decide' }
+    }
+    return $p
+}
+
 $sb = [System.Text.StringBuilder]::new()
 [void]$sb.AppendLine('param tenantSettings = [')
 
 foreach ($s in $settings) {
+    $posture = Get-Posture -Setting $s
+    if ($posture -eq 'excluded') { continue }
+
+    # 'decide' entries are emitted commented out: visible as an outstanding decision, but inert on
+    # deploy. The current tenant value is shown so there's a starting point for the conversation.
+    $c = if ($posture -eq 'decide') { '// ' } else { '' }
+
     [void]$sb.AppendLine("  // $($s.title)")
-    [void]$sb.AppendLine('  {')
-    [void]$sb.AppendLine("    name: '$($s.settingName)'")
-    [void]$sb.AppendLine("    enabled: $($s.enabled.ToString().ToLowerInvariant())")
+    if ($posture -eq 'decide') {
+        [void]$sb.AppendLine("  // DECIDE - no default recommended. Currently: $($s.enabled.ToString().ToLowerInvariant())")
+    }
+    [void]$sb.AppendLine("  $c{")
+    [void]$sb.AppendLine("  $c  name: '$($s.settingName)'")
+    $enabledValue = switch ($posture) {
+        'on'        { 'true' }
+        'on-scoped' { 'true' }
+        'off'       { 'false' }
+        default     { $s.enabled.ToString().ToLowerInvariant() }
+    }
+    [void]$sb.AppendLine("  $c  enabled: $enabledValue")
 
     if ($s.canSpecifySecurityGroups) {
-        $enabledGroups = Format-Groups -Groups $s.enabledSecurityGroups -Key 'enabledSecurityGroups' -Indent '  ' -Redact:$Sanitise
-        if ($enabledGroups) { [void]$sb.AppendLine($enabledGroups) }
+        # on-scoped is the whole point of the posture: assert the setting on, but force a group to be
+        # named rather than letting it apply tenant-wide. A placeholder here is deliberate - it won't
+        # deploy until someone fills it in, which beats silently enabling something for everyone.
+        if ($posture -eq 'on-scoped') {
+            [void]$sb.AppendLine("  $c  enabledSecurityGroups: [")
+            [void]$sb.AppendLine("  $c    {")
+            [void]$sb.AppendLine("  $c      graphId: '<security-group-object-id>'")
+            [void]$sb.AppendLine("  $c      name: '<security-group-name>'")
+            [void]$sb.AppendLine("  $c    }")
+            [void]$sb.AppendLine("  $c  ]")
+        }
+        elseif ($posture -notin 'on', 'off') {
+            $enabledGroups = Format-Groups -Groups $s.enabledSecurityGroups -Key 'enabledSecurityGroups' -Indent "  $c" -Redact:$Sanitise
+            if ($enabledGroups) { [void]$sb.AppendLine($enabledGroups) }
 
-        $excludedGroups = Format-Groups -Groups $s.excludedSecurityGroups -Key 'excludedSecurityGroups' -Indent '  ' -Redact:$Sanitise
-        if ($excludedGroups) { [void]$sb.AppendLine($excludedGroups) }
+            $excludedGroups = Format-Groups -Groups $s.excludedSecurityGroups -Key 'excludedSecurityGroups' -Indent "  $c" -Redact:$Sanitise
+            if ($excludedGroups) { [void]$sb.AppendLine($excludedGroups) }
+        }
     }
 
     # The delegation flags are absent from the GET payload entirely for settings that don't support
@@ -116,24 +186,24 @@ foreach ($s in $settings) {
     # scopes are independent; a setting can support any combination of them.
     foreach ($scope in 'delegateToWorkspace', 'delegateToCapacity', 'delegateToDomain') {
         if ($null -ne $s.$scope) {
-            [void]$sb.AppendLine("    ${scope}: $($s.$scope.ToString().ToLowerInvariant())")
+            [void]$sb.AppendLine("  $c  ${scope}: $($s.$scope.ToString().ToLowerInvariant())")
         }
     }
 
     # A handful of settings carry typed values beyond the on/off flag.
     if ($s.properties -and @($s.properties).Count -gt 0) {
-        [void]$sb.AppendLine('    properties: [')
+        [void]$sb.AppendLine("  $c  properties: [")
         foreach ($p in $s.properties) {
-            [void]$sb.AppendLine('      {')
-            [void]$sb.AppendLine("        name: '$($p.name)'")
-            [void]$sb.AppendLine("        value: '$($p.value)'")
-            [void]$sb.AppendLine("        type: '$($p.type)'")
-            [void]$sb.AppendLine('      }')
+            [void]$sb.AppendLine("  $c    {")
+            [void]$sb.AppendLine("  $c      name: '$($p.name)'")
+            [void]$sb.AppendLine("  $c      value: '$($p.value)'")
+            [void]$sb.AppendLine("  $c      type: '$($p.type)'")
+            [void]$sb.AppendLine("  $c    }")
         }
-        [void]$sb.AppendLine('    ]')
+        [void]$sb.AppendLine("  $c  ]")
     }
 
-    [void]$sb.AppendLine('  }')
+    [void]$sb.AppendLine("  $c}")
 }
 
 [void]$sb.AppendLine(']')

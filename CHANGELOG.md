@@ -41,8 +41,8 @@ and read back off the assembly at startup. Tags are `vMAJOR.MINOR.PATCH` and mat
   paste-ready `param tenantSettings = [...]` block. `-Sanitise` replaces security group object IDs
   and names with placeholders for output destined somewhere public.
 - `deploy/tenant-settings.all.bicepparam`, a sanitised capture of all 169 settings the reference
-  tenant exposes, as a lookup for names and supported properties. Intended to copy entries out of,
-  not to deploy: applying it wholesale asserts every setting, including the ones currently off.
+  tenant exposes, as a lookup for names and supported properties. (Superseded in Unreleased by
+  `tenant-settings.baseline.bicepparam`.)
 
 ### Changed
 

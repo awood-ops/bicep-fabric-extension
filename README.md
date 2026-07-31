@@ -161,7 +161,17 @@ For what each setting actually does and a defensible default for it, see
 preferred posture and the reasoning, grounded in the Well-Architected security guidance and the
 Microsoft cloud security benchmark baseline.
 
-`deploy/tenant-settings.all.bicepparam` is a checked-in capture of all 169 settings this tenant exposes, as a reference for the names and which properties each one supports. It's generated with `-Sanitise`, so group object IDs are placeholders. Treat it as something to copy entries *out of* into `main.bicepparam` rather than a file to deploy. Applying it wholesale asserts all 169 settings, including turning off everything currently off. For a local working copy with real group IDs, regenerate without `-Sanitise` into `main.local.bicepparam`, which is gitignored.
+`deploy/tenant-settings.baseline.bicepparam` is a checked-in **recommended starting baseline**, aligned to the guidance above rather than capturing one tenant's current state. Regenerate it with:
+
+```powershell
+./get-tenant-settings.ps1 -AsBicepParam -Sanitise -Baseline ./baseline.json
+```
+
+`scripts/baseline.json` holds the posture for every setting, so the guidance is machine-readable and reviewable in a diff rather than living only in prose. Of the 169 settings it asserts 104, leaves 60 commented out as `DECIDE` where there's no security-driven answer, and deliberately excludes the 5 Advanced networking ones. Group-scoped settings carry `<placeholder>` values so the deploy fails until you fill them in, which is preferable to silently enabling something tenant-wide.
+
+If a setting appears in the tenant with no posture in the map, the script warns rather than guessing. That's the drift signal worth acting on, since it means a new switch nobody has decided on yet.
+
+For a local working copy with real group IDs and current values, regenerate without `-Sanitise` or `-Baseline` into `main.local.bicepparam`, which is gitignored.
 
 **The optional properties aren't valid on every setting.** `enabledSecurityGroups`/`excludedSecurityGroups` only apply where `canSpecifySecurityGroups` is true, and `delegateToWorkspace` only where the setting is delegatable; the update endpoint rejects them elsewhere. The extension builds its request body as a dictionary and omits anything left unset, so *omit the key entirely* rather than passing an empty array or `false`, because those are real values and get sent. `-AsBicepParam` already emits only the properties each setting supports.
 
