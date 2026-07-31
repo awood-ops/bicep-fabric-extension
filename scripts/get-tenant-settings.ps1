@@ -25,17 +25,28 @@ without also pinning every default-off setting to false.
 .PARAMETER Filter
 Wildcard match against the setting's technical name or title, e.g. '*ServicePrincipal*'.
 
+.PARAMETER Sanitise
+Replace security group object IDs and display names with placeholders. Use this when the output is
+going somewhere public - group object IDs and naming conventions are tenant-identifying, and only a
+handful of settings carry them, so the rest of the output is unaffected.
+
 .EXAMPLE
 ./get-tenant-settings.ps1 -Filter '*ServicePrincipal*'
 
 .EXAMPLE
-./get-tenant-settings.ps1 -AsBicepParam -EnabledOnly > ../deploy/tenant-settings.bicepparam.txt
+# Local working copy, real group IDs, gitignored
+./get-tenant-settings.ps1 -AsBicepParam > ../deploy/main.local.bicepparam
+
+.EXAMPLE
+# Committable reference template, placeholders instead of group IDs
+./get-tenant-settings.ps1 -AsBicepParam -Sanitise > ../deploy/tenant-settings.all.bicepparam
 #>
 [CmdletBinding()]
 param(
     [switch]$AsBicepParam,
     [switch]$EnabledOnly,
-    [string]$Filter
+    [string]$Filter,
+    [switch]$Sanitise
 )
 
 $ErrorActionPreference = 'Stop'
@@ -68,10 +79,17 @@ if (-not $AsBicepParam) {
 # or delegateToWorkspace at one that isn't delegatable, is rejected by the update endpoint - so the
 # generated array has to omit those keys rather than write them out as empty/false.
 function Format-Groups {
-    param($Groups, [string]$Key, [string]$Indent)
+    param($Groups, [string]$Key, [string]$Indent, [switch]$Redact)
     if (-not $Groups -or @($Groups).Count -eq 0) { return $null }
+    $i = 0
     $lines = @($Groups | ForEach-Object {
-        "$Indent    {`n$Indent      graphId: '$($_.graphId)'`n$Indent      name: '$($_.name)'`n$Indent    }"
+        $i++
+        # Numbered placeholders rather than one repeated token, so a setting scoped to several groups
+        # still shows how many are expected and which is which.
+        $suffix = if (@($Groups).Count -gt 1) { "-$i" } else { '' }
+        $graphId = if ($Redact) { "<security-group-object-id$suffix>" } else { $_.graphId }
+        $name = if ($Redact) { "<security-group-name$suffix>" } else { $_.name }
+        "$Indent    {`n$Indent      graphId: '$graphId'`n$Indent      name: '$name'`n$Indent    }"
     })
     return "$Indent  ${Key}: [`n$($lines -join "`n")`n$Indent  ]"
 }
@@ -86,10 +104,10 @@ foreach ($s in $settings) {
     [void]$sb.AppendLine("    enabled: $($s.enabled.ToString().ToLowerInvariant())")
 
     if ($s.canSpecifySecurityGroups) {
-        $enabledGroups = Format-Groups -Groups $s.enabledSecurityGroups -Key 'enabledSecurityGroups' -Indent '  '
+        $enabledGroups = Format-Groups -Groups $s.enabledSecurityGroups -Key 'enabledSecurityGroups' -Indent '  ' -Redact:$Sanitise
         if ($enabledGroups) { [void]$sb.AppendLine($enabledGroups) }
 
-        $excludedGroups = Format-Groups -Groups $s.excludedSecurityGroups -Key 'excludedSecurityGroups' -Indent '  '
+        $excludedGroups = Format-Groups -Groups $s.excludedSecurityGroups -Key 'excludedSecurityGroups' -Indent '  ' -Redact:$Sanitise
         if ($excludedGroups) { [void]$sb.AppendLine($excludedGroups) }
     }
 

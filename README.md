@@ -109,6 +109,8 @@ cd scripts
 
 That reads `GET /v1/admin/tenantsettings` as whoever's logged into `az login`, so run it as a Fabric Administrator — a scoped-down identity quietly returns a shorter list rather than failing.
 
+`deploy/tenant-settings.all.bicepparam` is a checked-in capture of all 169 settings this tenant exposes, as a reference for the names and which properties each one supports. It's generated with `-Sanitise`, so group object IDs are placeholders. Treat it as something to copy entries *out of* into `main.bicepparam` rather than a file to deploy — applying it wholesale asserts all 169 settings, including turning off everything currently off. For a local working copy with real group IDs, regenerate without `-Sanitise` into `main.local.bicepparam`, which is gitignored.
+
 **The optional properties aren't valid on every setting.** `enabledSecurityGroups`/`excludedSecurityGroups` only apply where `canSpecifySecurityGroups` is true, and `delegateToWorkspace` only where the setting is delegatable; the update endpoint rejects them elsewhere. The extension builds its request body as a dictionary and omits anything left unset, so *omit the key entirely* rather than passing an empty array or `false` — those are real values and get sent. `-AsBicepParam` already emits only the properties each setting supports.
 
 Failures now surface the API's response body rather than a bare status code, since a 400 here almost always names the property it objected to.
