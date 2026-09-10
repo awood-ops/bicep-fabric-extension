@@ -56,6 +56,7 @@
   "ShareToTeamsTenant": "decide",
   "AutoInstallPowerBIAppInTeamsTenant": "decide",
   "StorytellingTenant": "decide",
+  "LoopIntegration": "decide",
 
   "AllowServicePrincipalsUseReadAdminAPIs": "on-scoped",
   "AllowServicePrincipalsUseWriteAdminAPIs": "on-scoped",
@@ -81,6 +82,7 @@
   "AllowOneLakeUDK": "off",
   "OneLakeFileExplorer": "off",
   "OneLakeDiagnosticLogsEUII": "on",
+  "OneLakeCatalogSubItemDiscovery": "decide",
 
   "SnowflakeSSO": "off",
   "RedshiftSSO": "off",

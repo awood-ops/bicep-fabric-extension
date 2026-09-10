@@ -550,7 +550,7 @@ param tenantSettings = [
     name: 'EnableAnonymousDataAccessForFabricApps'
     enabled: false
   }
-  // Users can use Copilot and other features powered by Azure OpenAI
+  // Users can use Copilot, AI Agents and other AI experiences powered by Azure OpenAI
   {
     name: 'EnableAOAI'
     enabled: true
@@ -669,6 +669,12 @@ param tenantSettings = [
   // {
   //   name: 'ExportVisualImageTenant'
   //   enabled: true
+  //   enabledSecurityGroups: [
+  //     {
+  //       graphId: '<security-group-object-id>'
+  //       name: '<security-group-name>'
+  //     }
+  //   ]
   // }
   // Guest users can work with shared semantic models in their own tenants
   {
@@ -811,6 +817,12 @@ param tenantSettings = [
       }
     ]
   }
+  // Users can share Power BI visuals as Loop components (preview)
+  // DECIDE - no default recommended. Currently: true
+  // {
+  //   name: 'LoopIntegration'
+  //   enabled: true
+  // }
   // Share Fabric data with your Microsoft 365 services
   // DECIDE - no default recommended. Currently: false
   // {
@@ -849,6 +861,12 @@ param tenantSettings = [
   // DECIDE - no default recommended. Currently: true
   // {
   //   name: 'OneDriveSharePointViewerIntegrationTenantSettingV2'
+  //   enabled: true
+  // }
+  // Users can find objects in search
+  // DECIDE - no default recommended. Currently: true
+  // {
+  //   name: 'OneLakeCatalogSubItemDiscovery'
   //   enabled: true
   // }
   // Include end-user identifiers in OneLake diagnostic logs

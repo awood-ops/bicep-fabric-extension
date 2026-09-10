@@ -1,6 +1,6 @@
 # Fabric tenant settings: rationale and preferred posture
 
-A working reference for the 169 tenant settings exposed by `GET /v1/admin/tenantsettings`, with what
+A working reference for the 171 tenant settings exposed by `GET /v1/admin/tenantsettings`, with what
 each one does, a preferred default, and the reasoning behind it.
 
 ## How to read this
@@ -35,9 +35,9 @@ Two structural points worth internalising before changing anything:
 
 ## The risk concentration
 
-Not all 169 matter equally. Roughly:
+Not all 171 matter equally. Roughly:
 
-- **Export and sharing (32 settings)** is where data leaves the tenant. Highest concentration of
+- **Export and sharing (33 settings)** is where data leaves the tenant. Highest concentration of
   genuine exfiltration risk, and the group most worth going through line by line.
 - **Advanced networking (5)** and **Admin API / Developer (10)** are small but high-leverage, since they
   govern how the tenant is reached and who can automate against it.
@@ -84,6 +84,7 @@ Where data leaves. Worth the most scrutiny of any group.
 | `ShareToTeamsTenant` | Teams integration | **Org choice** | Coordinate with the Teams admin. |
 | `AutoInstallPowerBIAppInTeamsTenant` | Auto-install Power BI Teams app | **Org choice** | Adoption nudge, no data-boundary effect. |
 | `StorytellingTenant` | Power BI add-in for PowerPoint | **Org choice** | Live-connected, permission-respecting. |
+| `LoopIntegration` | Share Power BI visuals as Loop components (preview) | **Org choice** | Live-connected and permission-respecting, like the PowerPoint add-in, but the component travels wherever the Loop does (Teams chat, Outlook, Loop app). Scope by function, not security. Preview. |
 
 ---
 
@@ -351,6 +352,7 @@ Largely functional. Defaults are reasonable; decide on use case.
 | Setting | What it does | Preferred | Why |
 | --- | --- | --- | --- |
 | `DiscoverDatasetsConsumption` / `DiscoverDatasetsSettingsCertified` / `DiscoverDatasetsSettingsPromoted` | Discoverability of endorsed content | **On** | Metadata-only discovery with request-access. Drives reuse over duplication. |
+| `OneLakeCatalogSubItemDiscovery` | Surface sub-items (tables, files) in OneLake catalog search | **Org choice** | Metadata and names only; opening anything still needs permission. Deeper search results at the cost of exposing more object names to users who can't open them. |
 | `AppPush` | Push apps to end users without AppSource | **Org choice** | Convenience; still permission-bound. |
 | `PublishContentPack` | Publish apps org-wide | **On (scoped)** | Restrict who can publish to the entire organisation. |
 | `M365DataSharing` | Share Fabric data with M365 services | **Org choice** | Improves M365 search/recommendations; users only see what they can access. Auto-enabled only when both tenants share a region. |
@@ -394,7 +396,7 @@ nearly always better than `On`. The Bicep model in this repo expresses that dire
 `enabledSecurityGroups`.
 
 **Treat this as drift detection, not a one-off.** New settings appear regularly. This capture found
-169, and that number moves. The Well-Architected guidance is to compare live configuration against a
+171, and that number moves. The Well-Architected guidance is to compare live configuration against a
 baseline and alert on deviation; `scripts/get-tenant-settings.ps1` plus the checked-in
 `deploy/tenant-settings.baseline.bicepparam` is how that works here, with `scripts/baseline.json` holding the posture for each setting so this document's recommendations are machine-readable rather than prose only.
 

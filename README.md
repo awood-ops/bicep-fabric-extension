@@ -3,9 +3,9 @@
 [![Bicep](https://img.shields.io/badge/Bicep-local%20extension-0078D4?logo=microsoftazure&logoColor=white)](https://github.com/Azure/bicep/blob/main/docs/experimental/local-deploy-dotnet-quickstart.md)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](extension/FabricLocalExtension.csproj)
 [![Version](https://img.shields.io/badge/version-0.2.0-brightgreen)](CHANGELOG.md)
-[![Fabric tenant settings](https://img.shields.io/badge/tenant%20settings-169%20documented-0078D4)](docs/tenant-settings-guidance.md)
+[![Fabric tenant settings](https://img.shields.io/badge/tenant%20settings-171%20documented-0078D4)](docs/tenant-settings-guidance.md)
 
-**Manage Microsoft Fabric as infrastructure-as-code.** Workspaces, domains, and all 169 tenant
+**Manage Microsoft Fabric as infrastructure-as-code.** Workspaces, domains, and all 171 tenant
 settings, declared in Bicep and deployed with `bicep local-deploy`. No portal clicking, no
 imperative REST scripts.
 
@@ -48,11 +48,11 @@ resource setting 'TenantSetting' = {
 | **`identity/`** | Four Entra security groups (one per Fabric workspace role) plus a Key Vault, via the [Microsoft Graph Bicep extension](https://learn.microsoft.com/en-us/graph/templates/bicep/whats-new) |
 | **`capacity/`** | Fabric F2 capacity via the [AVM module](https://github.com/Azure/bicep-registry-modules/tree/main/avm/res/fabric/capacity) |
 | **`scripts/`** | `get-tenant-settings.ps1`, which dumps the tenant's live settings as a paste-ready `param tenantSettings = [...]` block, with `-Sanitise` for public output |
-| **`docs/`** | [**Tenant settings guidance**](docs/tenant-settings-guidance.md). What all 169 settings do, a preferred posture for each, and why |
+| **`docs/`** | [**Tenant settings guidance**](docs/tenant-settings-guidance.md). What all 171 settings do, a preferred posture for each, and why |
 
 ## Why bother
 
-Fabric tenant settings are a genuine governance problem: **169 switches, 107 of them scopable to
+Fabric tenant settings are a genuine governance problem: **171 switches, 107 of them scopable to
 security groups, defaulting to convenience over security**, and addressed by technical names the
 portal never shows you. The portal's "Create workspaces" is the API's `CreateAppWorkspaces`.
 
@@ -157,7 +157,7 @@ cd scripts
 That reads `GET /v1/admin/tenantsettings` as whoever's logged into `az login`, so run it as a Fabric Administrator. A scoped-down identity quietly returns a shorter list rather than failing.
 
 For what each setting actually does and a defensible default for it, see
-[**docs/tenant-settings-guidance.md**](docs/tenant-settings-guidance.md), covering all 169 settings with a
+[**docs/tenant-settings-guidance.md**](docs/tenant-settings-guidance.md), covering all 171 settings with a
 preferred posture and the reasoning, grounded in the Well-Architected security guidance and the
 Microsoft cloud security benchmark baseline.
 
@@ -167,7 +167,7 @@ Microsoft cloud security benchmark baseline.
 ./get-tenant-settings.ps1 -AsBicepParam -Sanitise -Baseline ./baseline.json
 ```
 
-`scripts/baseline.json` holds the posture for every setting, so the guidance is machine-readable and reviewable in a diff rather than living only in prose. Of the 169 settings it asserts 104, leaves 60 commented out as `DECIDE` where there's no security-driven answer, and deliberately excludes the 5 Advanced networking ones. Group-scoped settings carry `<placeholder>` values so the deploy fails until you fill them in, which is preferable to silently enabling something tenant-wide.
+`scripts/baseline.json` holds the posture for every setting, so the guidance is machine-readable and reviewable in a diff rather than living only in prose. Of the 171 settings it asserts 107, leaves 59 commented out as `DECIDE` where there's no security-driven answer, and deliberately excludes the 5 Advanced networking ones. Group-scoped settings carry `<placeholder>` values so the deploy fails until you fill them in, which is preferable to silently enabling something tenant-wide.
 
 If a setting appears in the tenant with no posture in the map, the script warns rather than guessing. That's the drift signal worth acting on, since it means a new switch nobody has decided on yet.
 

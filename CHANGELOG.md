@@ -32,11 +32,17 @@ and read back off the assembly at startup. Tags are `vMAJOR.MINOR.PATCH` and mat
 ### Changed
 
 - `deploy/tenant-settings.all.bicepparam` becomes `deploy/tenant-settings.baseline.bicepparam` and
-  now asserts the recommended posture instead of a snapshot. Of 169 settings it asserts 104, leaves
-  60 commented out as `DECIDE`, and excludes the 5 Advanced networking ones, which need their own
+  now asserts the recommended posture instead of a snapshot. Of 171 settings it asserts 107, leaves
+  59 commented out as `DECIDE`, and excludes the 5 Advanced networking ones, which need their own
   sequenced rollout rather than a bulk apply.
 - README restructured to lead with what the repo does and why, a worked Bicep example, and a table of
   the layout rather than a bare list.
+- Picked up two tenant settings Microsoft has added since the last capture, `LoopIntegration` (share
+  Power BI visuals as Loop components) and `OneLakeCatalogSubItemDiscovery` (sub-item discovery in
+  catalog search). Both classified `decide` in `scripts/baseline.json` (org choice, no security-driven
+  default) with a row each in `docs/tenant-settings-guidance.md`, and the regenerated baseline picks
+  up a Microsoft-side title change on `EnableAOAI` and new group-scoping on `ExportVisualImageTenant`.
+  Setting counts across the README and guidance move from 169 to 171.
 
 ## [0.2.0] - 2026-07-31
 
