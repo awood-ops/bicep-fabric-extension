@@ -167,7 +167,7 @@ Microsoft cloud security benchmark baseline.
 ./get-tenant-settings.ps1 -AsBicepParam -Sanitise -Baseline ./baseline.json
 ```
 
-`scripts/baseline.json` holds the posture for every setting, so the guidance is machine-readable and reviewable in a diff rather than living only in prose. Of the 171 settings it asserts 107, leaves 59 commented out as `DECIDE` where there's no security-driven answer, and deliberately excludes the 5 Advanced networking ones. Group-scoped settings carry `<placeholder>` values so the deploy fails until you fill them in, which is preferable to silently enabling something tenant-wide.
+`scripts/baseline.json` holds the posture for every setting, so the guidance is machine-readable and reviewable in a diff rather than living only in prose. Of the 171 settings it asserts 108, leaves 58 commented out as `DECIDE` where there's no security-driven answer, and deliberately excludes the 5 Advanced networking ones. Group-scoped settings carry `<placeholder>` values so the deploy fails until you fill them in, which is preferable to silently enabling something tenant-wide.
 
 If a setting appears in the tenant with no posture in the map, the script warns rather than guessing. That's the drift signal worth acting on, since it means a new switch nobody has decided on yet.
 

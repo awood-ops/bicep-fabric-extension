@@ -32,17 +32,21 @@ and read back off the assembly at startup. Tags are `vMAJOR.MINOR.PATCH` and mat
 ### Changed
 
 - `deploy/tenant-settings.all.bicepparam` becomes `deploy/tenant-settings.baseline.bicepparam` and
-  now asserts the recommended posture instead of a snapshot. Of 171 settings it asserts 107, leaves
-  59 commented out as `DECIDE`, and excludes the 5 Advanced networking ones, which need their own
+  now asserts the recommended posture instead of a snapshot. Of 171 settings it asserts 108, leaves
+  58 commented out as `DECIDE`, and excludes the 5 Advanced networking ones, which need their own
   sequenced rollout rather than a bulk apply.
 - README restructured to lead with what the repo does and why, a worked Bicep example, and a table of
   the layout rather than a bare list.
 - Picked up two tenant settings Microsoft has added since the last capture, `LoopIntegration` (share
-  Power BI visuals as Loop components) and `OneLakeCatalogSubItemDiscovery` (sub-item discovery in
-  catalog search). Both classified `decide` in `scripts/baseline.json` (org choice, no security-driven
-  default) with a row each in `docs/tenant-settings-guidance.md`, and the regenerated baseline picks
-  up a Microsoft-side title change on `EnableAOAI` and new group-scoping on `ExportVisualImageTenant`.
-  Setting counts across the README and guidance move from 169 to 171.
+  Power BI visuals as Loop components, preview) and `OneLakeCatalogSubItemDiscovery` (index tables and
+  columns in OneLake catalog and global search). `OneLakeCatalogSubItemDiscovery` is asserted `on`:
+  Microsoft's own text says results are access-trimmed to items the user can already open, so it adds
+  discovery with no new disclosure boundary. `LoopIntegration` is left `decide`: same live,
+  permission-respecting model as the PowerPoint add-in, component stays in-tenant (OneDrive /
+  SharePoint Embedded), but it's preview and can't be security-group scoped. Both get a row in
+  `docs/tenant-settings-guidance.md`. The regenerated baseline also picks up a Microsoft-side title
+  change on `EnableAOAI` and new group-scoping on `ExportVisualImageTenant`. Setting counts across the
+  README and guidance move from 169 to 171.
 
 ## [0.2.0] - 2026-07-31
 

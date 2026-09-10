@@ -864,11 +864,10 @@ param tenantSettings = [
   //   enabled: true
   // }
   // Users can find objects in search
-  // DECIDE - no default recommended. Currently: true
-  // {
-  //   name: 'OneLakeCatalogSubItemDiscovery'
-  //   enabled: true
-  // }
+  {
+    name: 'OneLakeCatalogSubItemDiscovery'
+    enabled: true
+  }
   // Include end-user identifiers in OneLake diagnostic logs
   {
     name: 'OneLakeDiagnosticLogsEUII'

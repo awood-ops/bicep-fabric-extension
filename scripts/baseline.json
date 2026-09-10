@@ -82,7 +82,7 @@
   "AllowOneLakeUDK": "off",
   "OneLakeFileExplorer": "off",
   "OneLakeDiagnosticLogsEUII": "on",
-  "OneLakeCatalogSubItemDiscovery": "decide",
+  "OneLakeCatalogSubItemDiscovery": "on",
 
   "SnowflakeSSO": "off",
   "RedshiftSSO": "off",

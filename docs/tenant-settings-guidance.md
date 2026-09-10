@@ -84,7 +84,7 @@ Where data leaves. Worth the most scrutiny of any group.
 | `ShareToTeamsTenant` | Teams integration | **Org choice** | Coordinate with the Teams admin. |
 | `AutoInstallPowerBIAppInTeamsTenant` | Auto-install Power BI Teams app | **Org choice** | Adoption nudge, no data-boundary effect. |
 | `StorytellingTenant` | Power BI add-in for PowerPoint | **Org choice** | Live-connected, permission-respecting. |
-| `LoopIntegration` | Share Power BI visuals as Loop components (preview) | **Org choice** | Live-connected and permission-respecting, like the PowerPoint add-in, but the component travels wherever the Loop does (Teams chat, Outlook, Loop app). Scope by function, not security. Preview. |
+| `LoopIntegration` | Share Power BI visuals as Loop components (preview) | **Org choice** | Same model as the PowerPoint add-in (`StorytellingTenant`): the visual stays live and permission-respecting, RLS/OLS still apply, opening it needs a Power BI licence and access. The component file lives in the sharer's OneDrive (Loop pages in SharePoint Embedded), so it stays in-tenant; external reach rides on your OneDrive/SharePoint external-sharing settings and can be locked down separately via the Loop app's sharing override. Can't be security-group scoped, and it's preview, so a tenant that hasn't settled its Loop external-sharing posture may prefer it off for now. |
 
 ---
 
@@ -352,7 +352,7 @@ Largely functional. Defaults are reasonable; decide on use case.
 | Setting | What it does | Preferred | Why |
 | --- | --- | --- | --- |
 | `DiscoverDatasetsConsumption` / `DiscoverDatasetsSettingsCertified` / `DiscoverDatasetsSettingsPromoted` | Discoverability of endorsed content | **On** | Metadata-only discovery with request-access. Drives reuse over duplication. |
-| `OneLakeCatalogSubItemDiscovery` | Surface sub-items (tables, files) in OneLake catalog search | **Org choice** | Metadata and names only; opening anything still needs permission. Deeper search results at the cost of exposing more object names to users who can't open them. |
+| `OneLakeCatalogSubItemDiscovery` | Index sub-items (tables, columns, files) in OneLake catalog and global search | **On** | Access-trimmed: per Microsoft's setting text, "users can find objects only if they have access to items that contain them", so no new disclosure boundary, just deeper results within what a user can already open. Improves discovery and cuts shadow copies. Only caveat: table and column *names* become searchable text, so avoid encoding sensitive detail in object names. |
 | `AppPush` | Push apps to end users without AppSource | **Org choice** | Convenience; still permission-bound. |
 | `PublishContentPack` | Publish apps org-wide | **On (scoped)** | Restrict who can publish to the entire organisation. |
 | `M365DataSharing` | Share Fabric data with M365 services | **Org choice** | Improves M365 search/recommendations; users only see what they can access. Auto-enabled only when both tenants share a region. |
