@@ -47,7 +47,7 @@ resource setting 'TenantSetting' = {
 | **`deploy/`** | The template declaring domains, nested domains, workspaces (assigned to domains), and tenant settings, all through the extension |
 | **`identity/`** | Four Entra security groups (one per Fabric workspace role) plus a Key Vault, via the [Microsoft Graph Bicep extension](https://learn.microsoft.com/en-us/graph/templates/bicep/whats-new) |
 | **`capacity/`** | Fabric F2 capacity via the [AVM module](https://github.com/Azure/bicep-registry-modules/tree/main/avm/res/fabric/capacity) |
-| **`scripts/`** | `get-tenant-settings.ps1`, which dumps the tenant's live settings as a paste-ready `param tenantSettings = [...]` block, with `-Sanitise` for public output |
+| **`scripts/`** | `get-tenant-settings.ps1`, which dumps the tenant's live settings as a paste-ready `param tenantSettings = [...]` block, with `-Sanitise` for public output. `clear-fabric-tenant.ps1`, which deletes every workspace and domain in a dev tenant to reset it between lab runs (dry-run by default) |
 | **`docs/`** | [**Tenant settings guidance**](docs/tenant-settings-guidance.md). What all 169 settings do, a preferred posture for each, and why |
 
 ## Why bother

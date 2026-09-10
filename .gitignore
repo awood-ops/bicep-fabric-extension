@@ -4,3 +4,7 @@ screenshots/
 *.user
 main.local.bicepparam
 drift-summary.md
+
+# clear-fabric-tenant.ps1 run artifacts
+fabric-wipe-*.log
+fabric-wipe-*.csv

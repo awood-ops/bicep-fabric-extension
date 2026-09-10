@@ -13,6 +13,12 @@ and read back off the assembly at startup. Tags are `vMAJOR.MINOR.PATCH` and mat
 
 ### Added
 
+- `scripts/clear-fabric-tenant.ps1`, a teardown for a dev tenant between lab runs: deletes every
+  workspace (domains second, children before parents) via the Fabric REST API. Dry-run by default;
+  `-Execute` to act, `-Force` to skip the typed confirmation, `-KeepWorkspace`/`-KeepDomain` to
+  preserve named items. Self-grants workspace Admin when needed, and clears managed private endpoints
+  (reassigning to a supported capacity via `-ReassignCapacityId` first if the current SKU can't
+  manage them). Capacities are never touched.
 - `docs/tenant-settings-guidance.md`, giving rationale and a preferred posture for all 169 tenant settings,
   grounded in the Fabric tenant settings index, the Well-Architected security guidance, and the
   Microsoft cloud security benchmark baseline for Fabric.
